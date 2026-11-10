@@ -36,6 +36,14 @@
 - [ ]
 ```
 
+### 브랜치
+
+형식: `{tag}/#{이슈 번호}-{사용자명}`
+
+예: `feat/#21-sujong`
+
+tag는 라벨을 소문자로 쓴다 (feat, fix, refactor, design, chore, setting, comment, docs, test).
+
 ### 커밋
 
 형식: `[{Label}/{Issue Number}] {Label}: {message}`

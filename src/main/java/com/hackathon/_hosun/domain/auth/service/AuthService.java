@@ -31,10 +31,10 @@ public class AuthService {
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
-        if (!request.password().equals(request.passwordConfirm())) {
+        if (!request.password().equals(request.passwordConfirm())) { //패스워드 불일치
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
-        if (userRepository.existsByLoginId(request.loginId())) {
+        if (userRepository.existsByLoginId(request.loginId())) { //아이디 중복체크
             throw new BusinessException(ErrorCode.DUPLICATE_LOGIN_ID);
         }
 
@@ -52,13 +52,13 @@ public class AuthService {
         User user = userRepository.findByLoginIdAndDeletedAtIsNull(request.loginId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) { //비밀번호 틀릴 시
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getLoginId());
         String refreshToken = refreshTokenProvider.generate();
-        user.updateRefreshToken(
+        user.updateRefreshToken( //로그인 시 rt갱신
                 refreshTokenProvider.hash(refreshToken),
                 LocalDateTime.now().plusDays(REFRESH_TOKEN_EXPIRE_DAYS));
 

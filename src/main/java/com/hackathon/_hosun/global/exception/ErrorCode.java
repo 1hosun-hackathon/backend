@@ -24,7 +24,9 @@ public enum ErrorCode {
     ANALYSIS_NOT_READY(HttpStatus.CONFLICT, "분석이 아직 준비되지 않았습니다."),
     ANALYSIS_NOT_FAILED(HttpStatus.CONFLICT, "실패한 분석만 재시도할 수 있습니다."),
 
-    FILE_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "파일 용량이 너무 큽니다.");
+    FILE_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "파일 용량이 너무 큽니다."),
+
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
 
     private final HttpStatus status;
     private final String message;

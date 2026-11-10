@@ -11,6 +11,7 @@ public class ErrorResponse {
     private final String message;
     private final List<FieldError> errors;
 
+    //공통 에러 응답 포맷 api명세서에는 rsdata로 묶여있지 않아서 에러코드만 묶기 위한 포맷
     private ErrorResponse(String code, String message, List<FieldError> errors) {
         this.code = code;
         this.message = message;

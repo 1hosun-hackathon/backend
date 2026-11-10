@@ -10,7 +10,7 @@ spring:
 
 file:
   storage:
-    type: local               # S3 연동 시 s3로 변경
+    type: local               # GCP Cloud Storage 연동 시 gcs로 변경
     local:
       base-dir: ./uploads
       url-prefix: /files

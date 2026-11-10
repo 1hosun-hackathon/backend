@@ -3,8 +3,8 @@ package com.hackathon._hosun.global.storage;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 파일 저장소 추상화. 현재는 LocalFileStorage만 있고, S3 연동 시 구현체를 추가하고
- * file.storage.type=s3 로 바꾸면 된다.
+ * 파일 저장소 추상화. 현재는 LocalFileStorage만 있고, GCP Cloud Storage 연동 시 GcsFileStorage 구현체를 추가하고
+ * (@ConditionalOnProperty(name = "file.storage.type", havingValue = "gcs")) file.storage.type=gcs 로 바꾸면 된다.
  */
 public interface FileStorage {
 

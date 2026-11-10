@@ -10,7 +10,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
@@ -39,8 +38,7 @@ public class Training {
     @Column(name = "writing_type", length = 30, nullable = false)
     private String writingType;
 
-    @Lob
-    @Column(name = "requirements")
+    @Column(name = "requirements", columnDefinition = "TEXT")
     private String requirements;
 
     @Column(name = "timer_minutes")
@@ -50,8 +48,7 @@ public class Training {
     @Column(name = "status", length = 20, nullable = false)
     private TrainingStatus status;
 
-    @Lob
-    @Column(name = "temp_content")
+    @Column(name = "temp_content", columnDefinition = "MEDIUMTEXT")
     private String tempContent;
 
     @Column(name = "temp_saved_at")

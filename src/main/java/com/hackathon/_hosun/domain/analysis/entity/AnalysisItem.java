@@ -9,7 +9,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -35,22 +34,18 @@ public class AnalysisItem {
     @Column(name = "criterion", length = 20, nullable = false)
     private Criterion criterion;
 
-    @Lob
-    @Column(name = "user_summary")
+    @Column(name = "user_summary", columnDefinition = "TEXT")
     private String userSummary;
 
-    @Lob
-    @Column(name = "ai_summary")
+    @Column(name = "ai_summary", columnDefinition = "TEXT")
     private String aiSummary;
 
-    @Lob
-    @Column(name = "comparison")
+    @Column(name = "comparison", columnDefinition = "TEXT")
     private String comparison;
 
-    @Lob
-    @Column(name = "reflect_point")
+    @Column(name = "reflect_point", columnDefinition = "TEXT")
     private String reflectPoint;
 
-    @Column(name = "user_score")
+    @Column(name = "user_score", columnDefinition = "TINYINT")
     private Integer userScore;
 }

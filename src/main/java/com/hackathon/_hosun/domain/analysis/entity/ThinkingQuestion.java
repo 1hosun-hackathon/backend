@@ -28,7 +28,7 @@ public class ThinkingQuestion {
     @JoinColumn(name = "analysis_id", nullable = false)
     private ComparisonAnalysis analysis;
 
-    @Column(name = "seq_no", nullable = false)
+    @Column(name = "seq_no", columnDefinition = "TINYINT", nullable = false)
     private Short seqNo;
 
     @Column(name = "content", length = 500, nullable = false)

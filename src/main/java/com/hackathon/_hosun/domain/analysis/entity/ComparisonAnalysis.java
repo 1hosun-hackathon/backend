@@ -10,7 +10,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
@@ -38,16 +37,13 @@ public class ComparisonAnalysis {
     @JoinColumn(name = "ai_draft_id", nullable = false)
     private AiReferenceDraft aiDraft;
 
-    @Lob
-    @Column(name = "overall_summary")
+    @Column(name = "overall_summary", columnDefinition = "TEXT")
     private String overallSummary;
 
-    @Lob
-    @Column(name = "strengths")
+    @Column(name = "strengths", columnDefinition = "TEXT")
     private String strengths;
 
-    @Lob
-    @Column(name = "improvements")
+    @Column(name = "improvements", columnDefinition = "TEXT")
     private String improvements;
 
     @Column(name = "self_thought_ratio", precision = 5, scale = 2)

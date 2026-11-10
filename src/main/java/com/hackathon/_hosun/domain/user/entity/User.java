@@ -57,4 +57,8 @@ public class User {
         this.refreshTokenHash = null;
         this.refreshTokenExpiresAt = null;
     }
+
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }

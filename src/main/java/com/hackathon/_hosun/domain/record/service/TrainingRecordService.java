@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,7 +57,7 @@ public class TrainingRecordService {
         return new TrainingListResponse(items, page.getNumber(), page.getSize(), page.getTotalElements(), page.hasNext());
     }
 
-    public TrainingDetailResponse detail(Long userId, Long trainingId) {
+    public TrainingDetailResponse detail(Long userId, Long trainingId) { //상세정보
         Training training = findOwnedTraining(userId, trainingId);
         if (training.getStatus() != TrainingStatus.COMPLETED) {
             throw new BusinessException(ErrorCode.TRAINING_INVALID_STATUS);
@@ -97,14 +98,14 @@ public class TrainingRecordService {
     }
 
     @Transactional
-    public void delete(Long userId, Long trainingId) {
+    public void delete(Long userId, Long trainingId) { //삭제
         Training training = findOwnedTraining(userId, trainingId);
         training.delete();
     }
 
-    public HomeResponse getHome(Long userId) {
-        List<Training> recentCompleted = trainingRepository.findTop3ByUser_IdAndStatusAndDeletedAtIsNullOrderByCompletedAtDesc(
-                userId, TrainingStatus.COMPLETED);
+    public HomeResponse getHome(Long userId) { //홈화면에서 쓰는 조회, 최근 3개만 가져옴
+        List<Training> recentCompleted = trainingRepository.findByUser_IdAndStatusAndDeletedAtIsNullOrderByCompletedAtDesc(
+                userId, TrainingStatus.COMPLETED, PageRequest.of(0, HOME_RECENT_COUNT));
 
         if (recentCompleted.isEmpty()) {
             return new HomeResponse(null, null, null);

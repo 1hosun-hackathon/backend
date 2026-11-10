@@ -16,8 +16,8 @@ public interface TrainingRepository extends JpaRepository<Training, Long> {
 
     Optional<Training> findByIdAndUser_IdAndDeletedAtIsNull(Long id, Long userId);
 
-    List<Training> findTop3ByUser_IdAndStatusAndDeletedAtIsNullOrderByCompletedAtDesc(
-            Long userId, TrainingStatus status);
+    List<Training> findByUser_IdAndStatusAndDeletedAtIsNullOrderByCompletedAtDesc(
+            Long userId, TrainingStatus status, Pageable pageable);
 
     Optional<Training> findFirstByUser_IdAndStatusAndDeletedAtIsNullOrderByCompletedAtAsc(
             Long userId, TrainingStatus status);

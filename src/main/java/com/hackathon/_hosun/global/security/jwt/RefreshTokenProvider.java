@@ -15,13 +15,13 @@ public class RefreshTokenProvider {
 
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public String generate() {
+    public String generate() { //rt생성
         byte[] bytes = new byte[TOKEN_BYTE_LENGTH];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
-    public String hash(String token) {
+    public String hash(String token) { //rt해시
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hashed = digest.digest(token.getBytes(StandardCharsets.UTF_8));

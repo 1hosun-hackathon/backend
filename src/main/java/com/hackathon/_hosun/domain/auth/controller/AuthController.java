@@ -1,4 +1,4 @@
-package com.hackathon._hosun.domain.auth;
+package com.hackathon._hosun.domain.auth.controller;
 
 import com.hackathon._hosun.domain.auth.dto.CheckLoginIdResponse;
 import com.hackathon._hosun.domain.auth.dto.LoginRequest;
@@ -6,6 +6,7 @@ import com.hackathon._hosun.domain.auth.dto.LoginResponse;
 import com.hackathon._hosun.domain.auth.dto.ReissueResponse;
 import com.hackathon._hosun.domain.auth.dto.SignupRequest;
 import com.hackathon._hosun.domain.auth.dto.SignupResponse;
+import com.hackathon._hosun.domain.auth.service.AuthService;
 import com.hackathon._hosun.global.exception.BusinessException;
 import com.hackathon._hosun.global.exception.ErrorCode;
 import jakarta.validation.Valid;

@@ -27,7 +27,7 @@ public class JwtTokenProvider {
         this.accessTokenExpireSeconds = accessTokenExpireSeconds;
     }
 
-    public String createAccessToken(Long userId, String loginId) {
+    public String createAccessToken(Long userId, String loginId) { //at생성
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
@@ -38,7 +38,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public boolean validateToken(String token) {
+    public boolean validateToken(String token) { //토큰 검증
         try {
             Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
             return true;
@@ -47,7 +47,7 @@ public class JwtTokenProvider {
         }
     }
 
-    public Long getUserId(String token) {
+    public Long getUserId(String token) { //유저 정보 추출
         Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
         return Long.valueOf(claims.getSubject());
     }

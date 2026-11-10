@@ -1,4 +1,4 @@
-package com.hackathon._hosun.domain.user;
+package com.hackathon._hosun.domain.user.repository;
 
 import com.hackathon._hosun.domain.user.entity.User;
 import java.util.Optional;

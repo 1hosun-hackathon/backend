@@ -1,11 +1,11 @@
-package com.hackathon._hosun.domain.auth;
+package com.hackathon._hosun.domain.auth.service;
 
 import com.hackathon._hosun.domain.auth.dto.CheckLoginIdResponse;
 import com.hackathon._hosun.domain.auth.dto.LoginRequest;
 import com.hackathon._hosun.domain.auth.dto.SignupRequest;
 import com.hackathon._hosun.domain.auth.dto.SignupResponse;
-import com.hackathon._hosun.domain.user.UserRepository;
 import com.hackathon._hosun.domain.user.entity.User;
+import com.hackathon._hosun.domain.user.repository.UserRepository;
 import com.hackathon._hosun.global.exception.BusinessException;
 import com.hackathon._hosun.global.exception.ErrorCode;
 import com.hackathon._hosun.global.security.jwt.JwtTokenProvider;

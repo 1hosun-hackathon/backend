@@ -39,4 +39,17 @@ public class User {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    public static User create(String loginId, String passwordHash) {
+        User user = new User();
+        user.loginId = loginId;
+        user.passwordHash = passwordHash;
+        user.createdAt = LocalDateTime.now();
+        return user;
+    }
+
+    public void updateRefreshToken(String refreshTokenHash, LocalDateTime expiresAt) {
+        this.refreshTokenHash = refreshTokenHash;
+        this.refreshTokenExpiresAt = expiresAt;
+    }
 }

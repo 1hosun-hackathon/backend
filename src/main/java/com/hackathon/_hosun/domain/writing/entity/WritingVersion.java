@@ -1,5 +1,6 @@
-package com.hackathon._hosun.domain.analysis;
+package com.hackathon._hosun.domain.writing.entity;
 
+import com.hackathon._hosun.domain.training.entity.Training;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,45 +13,37 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "analysis_item")
+@Table(name = "writing_version")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class AnalysisItem {
+public class WritingVersion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "item_id")
+    @Column(name = "version_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "analysis_id", nullable = false)
-    private ComparisonAnalysis analysis;
+    @JoinColumn(name = "training_id", nullable = false)
+    private Training training;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "criterion", length = 20, nullable = false)
-    private Criterion criterion;
+    @Column(name = "version_type", length = 20, nullable = false)
+    private VersionType versionType;
+
+    @Column(name = "seq_no", nullable = false)
+    private Integer seqNo;
 
     @Lob
-    @Column(name = "user_summary")
-    private String userSummary;
+    @Column(name = "content", nullable = false)
+    private String content;
 
-    @Lob
-    @Column(name = "ai_summary")
-    private String aiSummary;
-
-    @Lob
-    @Column(name = "comparison")
-    private String comparison;
-
-    @Lob
-    @Column(name = "reflect_point")
-    private String reflectPoint;
-
-    @Column(name = "user_score")
-    private Integer userScore;
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
 }

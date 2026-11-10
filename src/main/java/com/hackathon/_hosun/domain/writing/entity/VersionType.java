@@ -1,4 +1,4 @@
-package com.hackathon._hosun.domain.training;
+package com.hackathon._hosun.domain.writing.entity;
 
 public enum VersionType {
     DRAFT,

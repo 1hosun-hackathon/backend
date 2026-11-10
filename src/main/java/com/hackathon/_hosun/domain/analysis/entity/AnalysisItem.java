@@ -1,6 +1,5 @@
-package com.hackathon._hosun.domain.analysis;
+package com.hackathon._hosun.domain.analysis.entity;
 
-import com.hackathon._hosun.domain.training.Training;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,34 +12,45 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "ai_reference_draft")
+@Table(name = "analysis_item")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class AiReferenceDraft {
+public class AnalysisItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ai_draft_id")
+    @Column(name = "item_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "training_id", nullable = false)
-    private Training training;
-
-    @Lob
-    @Column(name = "content")
-    private String content;
+    @JoinColumn(name = "analysis_id", nullable = false)
+    private ComparisonAnalysis analysis;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 20, nullable = false)
-    private ProcessingStatus status;
+    @Column(name = "criterion", length = 20, nullable = false)
+    private Criterion criterion;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Lob
+    @Column(name = "user_summary")
+    private String userSummary;
+
+    @Lob
+    @Column(name = "ai_summary")
+    private String aiSummary;
+
+    @Lob
+    @Column(name = "comparison")
+    private String comparison;
+
+    @Lob
+    @Column(name = "reflect_point")
+    private String reflectPoint;
+
+    @Column(name = "user_score")
+    private Integer userScore;
 }

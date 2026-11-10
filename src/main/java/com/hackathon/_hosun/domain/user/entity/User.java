@@ -1,4 +1,4 @@
-package com.hackathon._hosun.domain.user;
+package com.hackathon._hosun.domain.user.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

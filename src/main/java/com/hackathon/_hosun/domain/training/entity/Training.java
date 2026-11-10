@@ -1,6 +1,6 @@
-package com.hackathon._hosun.domain.training;
+package com.hackathon._hosun.domain.training.entity;
 
-import com.hackathon._hosun.domain.user.User;
+import com.hackathon._hosun.domain.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

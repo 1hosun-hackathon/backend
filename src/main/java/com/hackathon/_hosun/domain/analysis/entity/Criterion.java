@@ -1,4 +1,4 @@
-package com.hackathon._hosun.domain.analysis;
+package com.hackathon._hosun.domain.analysis.entity;
 
 public enum Criterion {
     THESIS,

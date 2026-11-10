@@ -1,6 +1,6 @@
-package com.hackathon._hosun.domain.analysis;
+package com.hackathon._hosun.domain.analysis.entity;
 
-import com.hackathon._hosun.domain.training.WritingVersion;
+import com.hackathon._hosun.domain.training.entity.Training;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,48 +13,29 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "comparison_analysis")
+@Table(name = "ai_reference_draft")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ComparisonAnalysis {
+public class AiReferenceDraft {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "analysis_id")
+    @Column(name = "ai_draft_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "version_id", nullable = false)
-    private WritingVersion version;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ai_draft_id", nullable = false)
-    private AiReferenceDraft aiDraft;
+    @JoinColumn(name = "training_id", nullable = false)
+    private Training training;
 
     @Lob
-    @Column(name = "overall_summary")
-    private String overallSummary;
-
-    @Lob
-    @Column(name = "strengths")
-    private String strengths;
-
-    @Lob
-    @Column(name = "improvements")
-    private String improvements;
-
-    @Column(name = "self_thought_ratio", precision = 5, scale = 2)
-    private BigDecimal selfThoughtRatio;
-
-    @Column(name = "ai_dependency_ratio", precision = 5, scale = 2)
-    private BigDecimal aiDependencyRatio;
+    @Column(name = "content")
+    private String content;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)

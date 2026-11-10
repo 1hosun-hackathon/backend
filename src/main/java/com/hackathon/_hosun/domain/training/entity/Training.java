@@ -35,8 +35,9 @@ public class Training {
     @Column(name = "topic", length = 200, nullable = false)
     private String topic;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "writing_type", length = 30, nullable = false)
-    private String writingType;
+    private WritingType writingType;
 
     @Column(name = "requirements", columnDefinition = "TEXT")
     private String requirements;
@@ -65,6 +66,27 @@ public class Training {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    public static Training create(
+            User user, String topic, WritingType writingType, String requirements, Short timerMinutes) {
+        Training training = new Training();
+        training.user = user;
+        training.topic = topic;
+        training.writingType = writingType;
+        training.requirements = requirements;
+        training.timerMinutes = timerMinutes;
+        training.status = TrainingStatus.DRAFTING;
+        training.startedAt = LocalDateTime.now();
+        return training;
+    }
+
+    /** started_at + timer_minutes. 타이머 미설정이면 null */
+    public LocalDateTime getTimerEndsAt() {
+        if (timerMinutes == null || startedAt == null) {
+            return null;
+        }
+        return startedAt.plusMinutes(timerMinutes);
+    }
 
     public void delete() {
         this.deletedAt = LocalDateTime.now();

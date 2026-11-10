@@ -43,4 +43,16 @@ public class TrainingAttachment {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public static TrainingAttachment create(
+            Training training, String fileName, String fileUrl, String fileType, Long fileSize) {
+        TrainingAttachment attachment = new TrainingAttachment();
+        attachment.training = training;
+        attachment.fileName = fileName;
+        attachment.fileUrl = fileUrl;
+        attachment.fileType = fileType;
+        attachment.fileSize = fileSize;
+        attachment.createdAt = LocalDateTime.now();
+        return attachment;
+    }
 }

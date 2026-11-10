@@ -33,4 +33,12 @@ public class ThinkingQuestion {
 
     @Column(name = "content", length = 500, nullable = false)
     private String content;
+
+    public static ThinkingQuestion create(ComparisonAnalysis analysis, short seqNo, String content) {
+        ThinkingQuestion question = new ThinkingQuestion();
+        question.analysis = analysis;
+        question.seqNo = seqNo;
+        question.content = content;
+        return question;
+    }
 }

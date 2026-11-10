@@ -44,4 +44,14 @@ public class WritingVersion {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public static WritingVersion create(Training training, VersionType versionType, int seqNo, String content) {
+        WritingVersion version = new WritingVersion();
+        version.training = training;
+        version.versionType = versionType;
+        version.seqNo = seqNo;
+        version.content = content;
+        version.createdAt = LocalDateTime.now();
+        return version;
+    }
 }

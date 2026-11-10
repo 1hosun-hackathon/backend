@@ -58,4 +58,32 @@ public class ComparisonAnalysis {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public static ComparisonAnalysis createPending(WritingVersion version, AiReferenceDraft aiDraft) {
+        ComparisonAnalysis analysis = new ComparisonAnalysis();
+        analysis.version = version;
+        analysis.aiDraft = aiDraft;
+        analysis.status = ProcessingStatus.PENDING;
+        analysis.createdAt = LocalDateTime.now();
+        return analysis;
+    }
+
+    public void startGenerating() {
+        this.status = ProcessingStatus.GENERATING;
+    }
+
+    public void succeed(
+            String overallSummary, String strengths, String improvements,
+            BigDecimal selfThoughtRatio, BigDecimal aiDependencyRatio) {
+        this.overallSummary = overallSummary;
+        this.strengths = strengths;
+        this.improvements = improvements;
+        this.selfThoughtRatio = selfThoughtRatio;
+        this.aiDependencyRatio = aiDependencyRatio;
+        this.status = ProcessingStatus.SUCCESS;
+    }
+
+    public void fail() {
+        this.status = ProcessingStatus.FAILED;
+    }
 }

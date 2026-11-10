@@ -1,5 +1,9 @@
 package com.hackathon._hosun.domain.analysis.ai;
 
+import com.hackathon._hosun.domain.analysis.entity.Criterion;
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -15,5 +19,19 @@ public class StubAiClient implements AiClient {
         log.info("[StubAiClient] AI 작성 글 더미 생성: trainingId={}", request.trainingId());
         return "[임시 AI 작성 글] 주제: " + request.topic() + " / 글 유형: " + request.writingType()
                 + "\n실제 AI 모델 연동 전 더미 응답입니다.";
+    }
+
+    @Override
+    public AiComparisonResult analyzeComparison(AiComparisonRequest request) {
+        log.info("[StubAiClient] 비교 분석 더미 생성: trainingId={}", request.trainingId());
+        List<AiComparisonResult.Item> items = Arrays.stream(Criterion.values())
+                .map(c -> new AiComparisonResult.Item(
+                        c, "[임시] 내 글 요약", "[임시] AI 글 요약", "[임시] 비교", "[임시] 반영 포인트", 3))
+                .toList();
+        return new AiComparisonResult(
+                "[임시] 전체 요약", "[임시] 강점", "[임시] 개선점",
+                new BigDecimal("70.00"), new BigDecimal("30.00"),
+                items,
+                List.of("[임시] 질문 1", "[임시] 질문 2", "[임시] 질문 3"));
     }
 }

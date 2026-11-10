@@ -12,4 +12,10 @@ public interface AiClient {
      * 실패 시 예외를 던지면 ai_reference_draft.status 가 FAILED 로 기록된다.
      */
     String generateReferenceDraft(AiReferenceDraftRequest request);
+
+    /**
+     * 사용자 글과 AI 작성 글을 비교 분석한다.
+     * 실패 시 예외를 던지면 comparison_analysis.status 가 FAILED 로 기록된다.
+     */
+    AiComparisonResult analyzeComparison(AiComparisonRequest request);
 }

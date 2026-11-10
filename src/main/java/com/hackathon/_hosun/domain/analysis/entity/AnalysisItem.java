@@ -48,4 +48,18 @@ public class AnalysisItem {
 
     @Column(name = "user_score", columnDefinition = "TINYINT")
     private Integer userScore;
+
+    public static AnalysisItem create(
+            ComparisonAnalysis analysis, Criterion criterion, String userSummary, String aiSummary,
+            String comparison, String reflectPoint, Integer userScore) {
+        AnalysisItem item = new AnalysisItem();
+        item.analysis = analysis;
+        item.criterion = criterion;
+        item.userSummary = userSummary;
+        item.aiSummary = aiSummary;
+        item.comparison = comparison;
+        item.reflectPoint = reflectPoint;
+        item.userScore = userScore;
+        return item;
+    }
 }

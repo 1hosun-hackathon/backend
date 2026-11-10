@@ -1,5 +1,6 @@
 package com.hackathon._hosun.global.security;
 
+import com.hackathon._hosun.domain.user.repository.UserRepository;
 import com.hackathon._hosun.global.security.jwt.JwtAuthenticationEntryPoint;
 import com.hackathon._hosun.global.security.jwt.JwtAuthenticationFilter;
 import com.hackathon._hosun.global.security.jwt.JwtTokenProvider;
@@ -21,6 +22,7 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final UserRepository userRepository;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -45,7 +47,7 @@ public class SecurityConfig {
                         .anyRequest().permitAll())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtTokenProvider),
+                        new JwtAuthenticationFilter(jwtTokenProvider, userRepository),
                         UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

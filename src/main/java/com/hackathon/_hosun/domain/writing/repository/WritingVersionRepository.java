@@ -13,4 +13,6 @@ public interface WritingVersionRepository extends JpaRepository<WritingVersion, 
     List<WritingVersion> findByTraining_IdOrderBySeqNoAsc(Long trainingId);
 
     Optional<WritingVersion> findTopByTraining_IdOrderBySeqNoDesc(Long trainingId);
+
+    Optional<WritingVersion> findByTraining_IdAndSeqNo(Long trainingId, Integer seqNo);
 }

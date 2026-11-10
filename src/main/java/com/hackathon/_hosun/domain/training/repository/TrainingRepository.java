@@ -29,6 +29,8 @@ public interface TrainingRepository extends JpaRepository<Training, Long> {
     Optional<Training> findFirstByUser_IdAndStatusAndDeletedAtIsNullOrderByCompletedAtAsc(
             Long userId, TrainingStatus status);
 
+    List<Training> findByUser_IdAndStatusAndDeletedAtIsNull(Long userId, TrainingStatus status);
+
     @Query("""
             SELECT t FROM Training t
             WHERE t.user.id = :userId

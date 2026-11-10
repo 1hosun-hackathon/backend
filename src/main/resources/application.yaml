@@ -3,3 +3,17 @@ spring:
     name: 1hosun
   profiles:
     active: local
+  servlet:
+    multipart:
+      max-file-size: 10MB     # 첨부파일 1개 최대 (명세 가정값)
+      max-request-size: 55MB  # 파일 5개 + JSON
+
+file:
+  storage:
+    type: local               # S3 연동 시 s3로 변경
+    local:
+      base-dir: ./uploads
+      url-prefix: /files
+
+ai:
+  client: stub                # AI 모델 연동 전까지 더미 응답. 실제 구현체 붙이면 변경

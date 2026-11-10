@@ -1,3 +1,5 @@
 spring:
   application:
     name: 1hosun
+  profiles:
+    active: local

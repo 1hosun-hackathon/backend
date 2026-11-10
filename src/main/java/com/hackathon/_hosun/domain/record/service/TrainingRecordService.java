@@ -14,10 +14,8 @@ import com.hackathon._hosun.domain.writing.repository.WritingVersionRepository;
 import com.hackathon._hosun.global.exception.BusinessException;
 import com.hackathon._hosun.global.exception.ErrorCode;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,6 +33,7 @@ public class TrainingRecordService {
     private final TrainingRepository trainingRepository;
     private final WritingVersionRepository writingVersionRepository;
     private final ComparisonAnalysisRepository comparisonAnalysisRepository;
+    private final SelfThoughtRatioService selfThoughtRatioService;
 
     public TrainingListResponse list(Long userId, String status, Pageable pageable) {
         Page<Training> page = switch (normalizeStatus(status)) {
@@ -111,32 +110,14 @@ public class TrainingRecordService {
             return new HomeResponse(null, null, null);
         }
 
-        BigDecimal latestRatio = representativeRatio(recentCompleted.get(0));
+        BigDecimal latestRatio = selfThoughtRatioService.representativeSelfThoughtRatio(recentCompleted.get(0));
         BigDecimal firstRatio = trainingRepository
                 .findFirstByUser_IdAndStatusAndDeletedAtIsNullOrderByCompletedAtAsc(userId, TrainingStatus.COMPLETED)
-                .map(this::representativeRatio)
+                .map(selfThoughtRatioService::representativeSelfThoughtRatio)
                 .orElse(null);
-        BigDecimal selfThoughtRatio = average(recentCompleted);
+        BigDecimal selfThoughtRatio = selfThoughtRatioService.average(recentCompleted);
 
         return new HomeResponse(selfThoughtRatio, firstRatio, latestRatio);
-    }
-
-    private BigDecimal average(List<Training> trainings) {
-        List<BigDecimal> ratios = trainings.stream()
-                .map(this::representativeRatio)
-                .filter(Objects::nonNull)
-                .toList();
-        if (ratios.isEmpty()) {
-            return null;
-        }
-        BigDecimal sum = ratios.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        return sum.divide(BigDecimal.valueOf(ratios.size()), 2, RoundingMode.HALF_UP);
-    }
-
-    private BigDecimal representativeRatio(Training training) {
-        return comparisonAnalysisRepository.findTopByVersion_Training_IdOrderByCreatedAtDesc(training.getId())
-                .map(ComparisonAnalysis::getSelfThoughtRatio)
-                .orElse(null);
     }
 
     private LocalDateTime representativeDate(Training training) {

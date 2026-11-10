@@ -1,9 +1,9 @@
 package com.hackathon._hosun.domain.analysis.ai;
 
 /**
- * AI 모델 호출 진입점. AI 담당자가 실제 구현체를 만들면 여기에 붙인다.
- * 구현체를 추가할 때는 @ConditionalOnProperty(name = "ai.client", havingValue = "...") 를 달고
- * application.yaml 의 ai.client 값을 바꾸면 StubAiClient 대신 사용된다.
+ * AI 모델 호출 진입점. 구현체는 application.yaml 의 ai.client 값으로 고른다.
+ * - stub: StubAiClient (더미 응답, 기본값)
+ * - http: HttpAiClient (FastAPI AI 서버 호출, 주소·경로·타임아웃은 ai.http.*)
  */
 public interface AiClient {
 

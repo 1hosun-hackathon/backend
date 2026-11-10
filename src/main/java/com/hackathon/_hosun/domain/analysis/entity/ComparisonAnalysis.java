@@ -68,6 +68,11 @@ public class ComparisonAnalysis {
         return analysis;
     }
 
+    /** 서버 재시작 복구·재시도용: 다시 처리 대기 상태로 되돌림 */
+    public void resetToPending() {
+        this.status = ProcessingStatus.PENDING;
+    }
+
     public void startGenerating() {
         this.status = ProcessingStatus.GENERATING;
     }

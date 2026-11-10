@@ -1,0 +1,10 @@
+.git
+.gradle
+build
+.idea
+*.iml
+out
+.claude
+CLAUDE.md
+src/main/resources/application-local.yaml
+src/main/resources/application-local.yaml.example

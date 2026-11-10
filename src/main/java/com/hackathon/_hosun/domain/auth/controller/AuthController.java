@@ -9,6 +9,7 @@ import com.hackathon._hosun.domain.auth.dto.SignupResponse;
 import com.hackathon._hosun.domain.auth.service.AuthService;
 import com.hackathon._hosun.global.exception.BusinessException;
 import com.hackathon._hosun.global.exception.ErrorCode;
+import com.hackathon._hosun.global.security.jwt.RefreshTokenCookieFactory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,11 +17,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -37,9 +36,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private static final String REFRESH_TOKEN_COOKIE = "refreshToken";
-
     private final AuthService authService;
+    private final RefreshTokenCookieFactory refreshTokenCookieFactory;
 
     @Operation(summary = "회원가입", description = "로그인ID/비밀번호로 회원가입한다.")
     @ApiResponses({
@@ -72,7 +70,7 @@ public class AuthController {
 
         LoginResponse body = new LoginResponse(result.accessToken(), result.expiresIn(), result.loginId());
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken()).toString())
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookieFactory.create(result.refreshToken()).toString())
                 .body(body);
     }
 
@@ -86,7 +84,7 @@ public class AuthController {
     @PostMapping("/reissue")
     public ResponseEntity<ReissueResponse> reissue(
             @Parameter(hidden = true)
-            @CookieValue(name = REFRESH_TOKEN_COOKIE, required = false) String refreshToken) {
+            @CookieValue(name = RefreshTokenCookieFactory.COOKIE_NAME, required = false) String refreshToken) {
         if (refreshToken == null) {
             throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
@@ -94,7 +92,7 @@ public class AuthController {
 
         ReissueResponse body = new ReissueResponse(result.accessToken(), result.expiresIn());
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken()).toString())
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookieFactory.create(result.refreshToken()).toString())
                 .body(body);
     }
 
@@ -108,27 +106,7 @@ public class AuthController {
     public ResponseEntity<Void> logout(@AuthenticationPrincipal Long userId) {
         authService.logout(userId);
         return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE, expiredRefreshTokenCookie().toString())
-                .build();
-    }
-
-    private ResponseCookie refreshTokenCookie(String value) {
-        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, value)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")
-                .path("/")
-                .maxAge(Duration.ofDays(AuthService.REFRESH_TOKEN_EXPIRE_DAYS))
-                .build();
-    }
-
-    private ResponseCookie expiredRefreshTokenCookie() {
-        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")
-                .path("/")
-                .maxAge(Duration.ZERO)
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookieFactory.createExpired().toString())
                 .build();
     }
 }

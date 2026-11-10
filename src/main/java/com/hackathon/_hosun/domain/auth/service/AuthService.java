@@ -9,6 +9,7 @@ import com.hackathon._hosun.domain.user.repository.UserRepository;
 import com.hackathon._hosun.global.exception.BusinessException;
 import com.hackathon._hosun.global.exception.ErrorCode;
 import com.hackathon._hosun.global.security.jwt.JwtTokenProvider;
+import com.hackathon._hosun.global.security.jwt.RefreshTokenCookieFactory;
 import com.hackathon._hosun.global.security.jwt.RefreshTokenProvider;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AuthService {
-
-    // ponytail: 명세서에 refresh token 만료 기간이 없어 14일로 가정. 바뀌면 여기만 수정
-    public static final long REFRESH_TOKEN_EXPIRE_DAYS = 14;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -60,7 +58,7 @@ public class AuthService {
         String refreshToken = refreshTokenProvider.generate();
         user.updateRefreshToken( //로그인 시 rt갱신
                 refreshTokenProvider.hash(refreshToken),
-                LocalDateTime.now().plusDays(REFRESH_TOKEN_EXPIRE_DAYS));
+                LocalDateTime.now().plusDays(RefreshTokenCookieFactory.EXPIRE_DAYS));
 
         return new LoginResult(
                 accessToken,
@@ -83,7 +81,7 @@ public class AuthService {
         String newRefreshToken = refreshTokenProvider.generate();
         user.updateRefreshToken(
                 refreshTokenProvider.hash(newRefreshToken),
-                LocalDateTime.now().plusDays(REFRESH_TOKEN_EXPIRE_DAYS));
+                LocalDateTime.now().plusDays(RefreshTokenCookieFactory.EXPIRE_DAYS));
 
         return new ReissueResult(newAccessToken, jwtTokenProvider.getAccessTokenExpireSeconds(), newRefreshToken);
     }

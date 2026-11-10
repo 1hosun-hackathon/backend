@@ -127,7 +127,7 @@ public class DashboardService {
                 best = criterion;
             }
         }
-        return best == null ? null : new DashboardResponse.CriterionSummary(best, label(best));
+        return best == null ? null : new DashboardResponse.CriterionSummary(best, best.getLabel());
     }
 
     private DashboardResponse.CriterionSummary focusArea(List<Training> recentTrainings) {
@@ -146,7 +146,7 @@ public class DashboardService {
                 worst = entry.getKey();
             }
         }
-        return worst == null ? null : new DashboardResponse.CriterionSummary(worst, label(worst));
+        return worst == null ? null : new DashboardResponse.CriterionSummary(worst, worst.getLabel());
     }
 
     private Map<Criterion, Integer> scoresByCriterion(Training training) {
@@ -181,15 +181,5 @@ public class DashboardService {
     private DashboardResponse.RecentItem toRecentItem(Training training) {
         long recheckCount = writingVersionRepository.countByTraining_IdAndVersionType(training.getId(), VersionType.REVISION);
         return new DashboardResponse.RecentItem(training.getId(), training.getTopic(), training.getCompletedAt(), recheckCount);
-    }
-
-    private String label(Criterion criterion) {
-        return switch (criterion) {
-            case THESIS -> "논지";
-            case EVIDENCE -> "근거";
-            case STRUCTURE -> "구조";
-            case EXPRESSION -> "표현";
-            case ORIGINALITY -> "독창성";
-        };
     }
 }

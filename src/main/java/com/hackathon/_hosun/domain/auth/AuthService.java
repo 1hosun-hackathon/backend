@@ -69,6 +69,35 @@ public class AuthService {
                 refreshToken);
     }
 
+    @Transactional
+    public ReissueResult reissue(String refreshToken) {
+        User user = userRepository.findByRefreshTokenHash(refreshTokenProvider.hash(refreshToken))
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+
+        if (user.getRefreshTokenExpiresAt() == null
+                || user.getRefreshTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.EXPIRED_REFRESH_TOKEN);
+        }
+
+        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getLoginId());
+        String newRefreshToken = refreshTokenProvider.generate();
+        user.updateRefreshToken(
+                refreshTokenProvider.hash(newRefreshToken),
+                LocalDateTime.now().plusDays(REFRESH_TOKEN_EXPIRE_DAYS));
+
+        return new ReissueResult(newAccessToken, jwtTokenProvider.getAccessTokenExpireSeconds(), newRefreshToken);
+    }
+
+    @Transactional
+    public void logout(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
+        user.clearRefreshToken();
+    }
+
     public record LoginResult(String accessToken, long expiresIn, String loginId, String refreshToken) {
+    }
+
+    public record ReissueResult(String accessToken, long expiresIn, String refreshToken) {
     }
 }

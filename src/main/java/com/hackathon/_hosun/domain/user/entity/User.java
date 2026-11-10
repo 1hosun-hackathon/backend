@@ -52,4 +52,9 @@ public class User {
         this.refreshTokenHash = refreshTokenHash;
         this.refreshTokenExpiresAt = expiresAt;
     }
+
+    public void clearRefreshToken() {
+        this.refreshTokenHash = null;
+        this.refreshTokenExpiresAt = null;
+    }
 }

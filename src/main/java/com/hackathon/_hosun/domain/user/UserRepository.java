@@ -9,4 +9,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByLoginId(String loginId);
 
     Optional<User> findByLoginIdAndDeletedAtIsNull(String loginId);
+
+    Optional<User> findByRefreshTokenHash(String refreshTokenHash);
 }

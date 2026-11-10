@@ -3,8 +3,11 @@ package com.hackathon._hosun.domain.auth;
 import com.hackathon._hosun.domain.auth.dto.CheckLoginIdResponse;
 import com.hackathon._hosun.domain.auth.dto.LoginRequest;
 import com.hackathon._hosun.domain.auth.dto.LoginResponse;
+import com.hackathon._hosun.domain.auth.dto.ReissueResponse;
 import com.hackathon._hosun.domain.auth.dto.SignupRequest;
 import com.hackathon._hosun.domain.auth.dto.SignupResponse;
+import com.hackathon._hosun.global.exception.BusinessException;
+import com.hackathon._hosun.global.exception.ErrorCode;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +15,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -43,17 +48,51 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthService.LoginResult result = authService.login(request);
 
-        ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE, result.refreshToken())
+        LoginResponse body = new LoginResponse(result.accessToken(), result.expiresIn(), result.loginId());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken()).toString())
+                .body(body);
+    }
+
+    @PostMapping("/reissue")
+    public ResponseEntity<ReissueResponse> reissue(
+            @CookieValue(name = REFRESH_TOKEN_COOKIE, required = false) String refreshToken) {
+        if (refreshToken == null) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+        AuthService.ReissueResult result = authService.reissue(refreshToken);
+
+        ReissueResponse body = new ReissueResponse(result.accessToken(), result.expiresIn());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken()).toString())
+                .body(body);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal Long userId) {
+        authService.logout(userId);
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, expiredRefreshTokenCookie().toString())
+                .build();
+    }
+
+    private ResponseCookie refreshTokenCookie(String value) {
+        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, value)
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("Strict")
                 .path("/")
                 .maxAge(Duration.ofDays(AuthService.REFRESH_TOKEN_EXPIRE_DAYS))
                 .build();
+    }
 
-        LoginResponse body = new LoginResponse(result.accessToken(), result.expiresIn(), result.loginId());
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(body);
+    private ResponseCookie expiredRefreshTokenCookie() {
+        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(Duration.ZERO)
+                .build();
     }
 }

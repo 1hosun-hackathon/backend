@@ -1,6 +1,9 @@
 package com.hackathon._hosun.domain.analysis.repository;
 
 import com.hackathon._hosun.domain.analysis.entity.ComparisonAnalysis;
+import com.hackathon._hosun.domain.analysis.entity.ProcessingStatus;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -9,4 +12,8 @@ public interface ComparisonAnalysisRepository extends JpaRepository<ComparisonAn
     Optional<ComparisonAnalysis> findByVersion_Id(Long versionId);
 
     Optional<ComparisonAnalysis> findTopByVersion_Training_IdOrderByCreatedAtDesc(Long trainingId);
+
+    List<ComparisonAnalysis> findByAiDraft_IdAndStatus(Long aiDraftId, ProcessingStatus status);
+
+    List<ComparisonAnalysis> findByStatusIn(Collection<ProcessingStatus> statuses);
 }

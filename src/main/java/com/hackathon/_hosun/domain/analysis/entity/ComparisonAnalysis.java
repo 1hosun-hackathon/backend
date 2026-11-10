@@ -58,4 +58,37 @@ public class ComparisonAnalysis {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public static ComparisonAnalysis createPending(WritingVersion version, AiReferenceDraft aiDraft) {
+        ComparisonAnalysis analysis = new ComparisonAnalysis();
+        analysis.version = version;
+        analysis.aiDraft = aiDraft;
+        analysis.status = ProcessingStatus.PENDING;
+        analysis.createdAt = LocalDateTime.now();
+        return analysis;
+    }
+
+    /** 서버 재시작 복구·재시도용: 다시 처리 대기 상태로 되돌림 */
+    public void resetToPending() {
+        this.status = ProcessingStatus.PENDING;
+    }
+
+    public void startGenerating() {
+        this.status = ProcessingStatus.GENERATING;
+    }
+
+    public void succeed(
+            String overallSummary, String strengths, String improvements,
+            BigDecimal selfThoughtRatio, BigDecimal aiDependencyRatio) {
+        this.overallSummary = overallSummary;
+        this.strengths = strengths;
+        this.improvements = improvements;
+        this.selfThoughtRatio = selfThoughtRatio;
+        this.aiDependencyRatio = aiDependencyRatio;
+        this.status = ProcessingStatus.SUCCESS;
+    }
+
+    public void fail() {
+        this.status = ProcessingStatus.FAILED;
+    }
 }

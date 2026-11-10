@@ -42,3 +42,9 @@ CLAUDE.md
 
 ### Secrets ###
 application-local.yaml
+
+### API Spec ###
+/docs/*.csv
+
+### Uploads ###
+/uploads/

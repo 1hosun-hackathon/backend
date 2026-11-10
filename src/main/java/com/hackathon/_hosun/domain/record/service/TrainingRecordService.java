@@ -47,7 +47,7 @@ public class TrainingRecordService {
                 .map(t -> new TrainingListResponse.Item(
                         t.getId(),
                         t.getTopic(),
-                        t.getWritingType(),
+                        t.getWritingType().getLabel(),
                         t.getStatus(),
                         representativeDate(t),
                         writingVersionRepository.countByTraining_IdAndVersionType(t.getId(), VersionType.REVISION)))
@@ -86,7 +86,7 @@ public class TrainingRecordService {
         return new TrainingDetailResponse(
                 training.getId(),
                 training.getTopic(),
-                training.getWritingType(),
+                training.getWritingType().getLabel(),
                 training.getCompletedAt(),
                 recheckCount,
                 new TrainingDetailResponse.DraftSummary(draftVersion.getId(), draftVersion.getContent(), draftVersion.getCreatedAt()),

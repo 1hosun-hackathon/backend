@@ -41,4 +41,30 @@ public class AiReferenceDraft {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public static AiReferenceDraft createPending(Training training) {
+        AiReferenceDraft draft = new AiReferenceDraft();
+        draft.training = training;
+        draft.status = ProcessingStatus.PENDING;
+        draft.createdAt = LocalDateTime.now();
+        return draft;
+    }
+
+    /** 서버 재시작 복구·재시도용: 다시 처리 대기 상태로 되돌림 */
+    public void resetToPending() {
+        this.status = ProcessingStatus.PENDING;
+    }
+
+    public void startGenerating() {
+        this.status = ProcessingStatus.GENERATING;
+    }
+
+    public void succeed(String content) {
+        this.content = content;
+        this.status = ProcessingStatus.SUCCESS;
+    }
+
+    public void fail() {
+        this.status = ProcessingStatus.FAILED;
+    }
 }

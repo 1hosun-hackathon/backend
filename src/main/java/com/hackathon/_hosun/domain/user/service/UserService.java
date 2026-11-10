@@ -19,7 +19,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final TrainingRepository trainingRepository;
 
-    public UserMeResponse getMe(Long userId) {
+    public UserMeResponse getMe(Long userId) { //내 정보 조회
         User user = findActiveUser(userId);
         long completedCount = trainingRepository.countByUser_IdAndStatusAndDeletedAtIsNull(
                 userId, TrainingStatus.COMPLETED);
@@ -28,13 +28,13 @@ public class UserService {
     }
 
     @Transactional
-    public void withdraw(Long userId) {
+    public void withdraw(Long userId) { //유저 삭제
         User user = findActiveUser(userId);
         user.delete();
         user.clearRefreshToken();
     }
 
-    private User findActiveUser(Long userId) {
+    private User findActiveUser(Long userId) { //repository로 유저 찾기
         return userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
     }

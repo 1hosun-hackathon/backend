@@ -1,5 +1,6 @@
 package com.hackathon._hosun.global.security.jwt;
 
+import com.hackathon._hosun.domain.user.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +19,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -26,8 +28,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         if (token != null && jwtTokenProvider.validateToken(token)) {
             Long userId = jwtTokenProvider.getUserId(token);
-            var authentication = new UsernamePasswordAuthenticationToken(userId, null, List.of());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            // 탈퇴(soft delete)한 유저는 토큰이 아직 안 만료됐어도 인증 처리하지 않음
+            if (userRepository.existsByIdAndDeletedAtIsNull(userId)) {
+                var authentication = new UsernamePasswordAuthenticationToken(userId, null, List.of());
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
         filterChain.doFilter(request, response);
     }

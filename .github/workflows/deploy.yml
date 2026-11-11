@@ -33,4 +33,4 @@ jobs:
           script: |
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/geuljeokgeuljeok-backend:latest
             sudo docker rm -f geuljeokgeuljeok || true
-            sudo docker run -d --name geuljeokgeuljeok --network host --env-file /home/soojong020706/geuljeokgeuljeok.env ${{ secrets.DOCKERHUB_USERNAME }}/geuljeokgeuljeok-backend:latest
+            sudo docker run -d --name geuljeokgeuljeok --network host -v /home/soojong020706/uploads:/app/uploads --env-file /home/soojong020706/geuljeokgeuljeok.env ${{ secrets.DOCKERHUB_USERNAME }}/geuljeokgeuljeok-backend:latest

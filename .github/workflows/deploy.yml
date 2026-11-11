@@ -1,0 +1,36 @@
+name: Deploy
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker Hub 로그인
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/geuljeokgeuljeok-backend:latest
+
+      - name: GCP VM에 재배포
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USER }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/geuljeokgeuljeok-backend:latest
+            sudo docker rm -f geuljeokgeuljeok || true
+            sudo docker run -d --name geuljeokgeuljeok --network host --env-file /home/soojong020706/geuljeokgeuljeok.env ${{ secrets.DOCKERHUB_USERNAME }}/geuljeokgeuljeok-backend:latest

@@ -28,3 +28,4 @@ ai:
     reference-draft-read-timeout: 150s  # 2-1 AI 작성 글 생성은 동기로 수십 초 (AI 담당 권장 120s 이상)
     poll-interval: 2s                 # 분석 상태(4-1) 조회 간격
     poll-timeout: 15m                 # 분석 1건 최대 대기. AI 서버는 순차 처리(1건 30~40초, 대기열 최대 20건)
+    retry-backoff: 5s                 # 일시 오류(QUEUE_FULL·RATE_LIMITED·5xx·네트워크) 후 다시 시도까지 대기 (재시도마다 배수로 증가)

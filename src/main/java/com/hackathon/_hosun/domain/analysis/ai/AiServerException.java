@@ -11,6 +11,7 @@ public class AiServerException extends RuntimeException {
 
     public static final String ANALYSIS_NOT_FOUND = "ANALYSIS_NOT_FOUND";
     public static final String ANALYSIS_NOT_FAILED = "ANALYSIS_NOT_FAILED";
+    public static final String ANALYSIS_NOT_READY = "ANALYSIS_NOT_READY";
 
     private final int httpStatus;
     private final String code;

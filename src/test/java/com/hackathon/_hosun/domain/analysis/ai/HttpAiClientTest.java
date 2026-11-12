@@ -33,7 +33,7 @@ class HttpAiClientTest {
         RestClient.Builder builder = HttpAiClient.configure(RestClient.builder().baseUrl(BASE), "test-key");
         server = MockRestServiceServer.bindTo(builder).build();
         RestClient restClient = builder.build();
-        client = new HttpAiClient(restClient, restClient, Duration.ZERO, Duration.ofSeconds(5));
+        client = new HttpAiClient(restClient, restClient, Duration.ZERO, Duration.ofSeconds(5), Duration.ZERO);
     }
 
     @Test
@@ -144,6 +144,68 @@ class HttpAiClientTest {
                     assertThat(e.getHttpStatus()).isEqualTo(401);
                     assertThat(e.getCode()).isEqualTo("UNAUTHORIZED");
                 });
+        server.verify();
+    }
+
+    @Test
+    void 제출이_QUEUE_FULL이면_잠시_후_다시_제출한다() {
+        server.expect(requestTo(BASE + "/api/v1/trainings/8/draft"))
+                .andRespond(error(HttpStatus.TOO_MANY_REQUESTS, "QUEUE_FULL", true));
+        expectSubmitDraft();
+        expectStatus("SUCCESS");
+        expectResult(resultJson(4));
+
+        assertThat(client.analyzeComparison(draftRequest()).items()).hasSize(5);
+        server.verify();
+    }
+
+    @Test
+    void 제출_재시도_횟수를_넘기면_실패한다() {
+        for (int i = 0; i < 3; i++) {
+            server.expect(requestTo(BASE + "/api/v1/trainings/8/draft"))
+                    .andRespond(error(HttpStatus.SERVICE_UNAVAILABLE, "LLM_UNAVAILABLE", true));
+        }
+
+        assertThatThrownBy(() -> client.analyzeComparison(draftRequest()))
+                .isInstanceOfSatisfying(AiServerException.class,
+                        e -> assertThat(e.getCode()).isEqualTo("LLM_UNAVAILABLE"));
+        server.verify();
+    }
+
+    @Test
+    void JSON이_아닌_5xx_응답도_일시_오류로_보고_다시_보낸다() {
+        server.expect(requestTo(BASE + "/api/v1/trainings"))
+                .andRespond(withStatus(HttpStatus.BAD_GATEWAY).contentType(MediaType.TEXT_HTML).body("<html>ngrok</html>"));
+        server.expect(requestTo(BASE + "/api/v1/trainings"))
+                .andRespond(json("{ \"aiWriting\": { \"content\": \"AI 글\" } }"));
+
+        assertThat(client.generateReferenceDraft(new AiReferenceDraftRequest(8L, "주제", "논설문", null, null)))
+                .isEqualTo("AI 글");
+        server.verify();
+    }
+
+    @Test
+    void 폴링_중_RATE_LIMITED면_쉬었다가_계속_조회한다() {
+        expectSubmitDraft();
+        server.expect(requestTo(BASE + "/api/v1/analyses/20/status"))
+                .andRespond(error(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", true));
+        expectStatus("SUCCESS");
+        expectResult(resultJson(4));
+
+        assertThat(client.analyzeComparison(draftRequest()).items()).hasSize(5);
+        server.verify();
+    }
+
+    @Test
+    void 결과_조회가_일시_오류면_상태부터_다시_조회해서_가져온다() {
+        expectSubmitDraft();
+        expectStatus("SUCCESS");
+        server.expect(requestTo(BASE + "/api/v1/analyses/20"))
+                .andRespond(error(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL", true));
+        expectStatus("SUCCESS");
+        expectResult(resultJson(4));
+
+        assertThat(client.analyzeComparison(draftRequest()).items()).hasSize(5);
         server.verify();
     }
 

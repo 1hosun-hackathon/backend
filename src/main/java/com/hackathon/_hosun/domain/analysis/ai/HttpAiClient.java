@@ -8,6 +8,7 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,12 +39,14 @@ public class HttpAiClient implements AiClient {
     private static final String API_KEY_HEADER = "X-API-Key";
     private static final String NGROK_SKIP_WARNING_HEADER = "ngrok-skip-browser-warning";
     private static final int MAX_RESUBMITS = 2;            // 폴링 중 AI 서버가 분석을 잊었을 때 다시 제출하는 최대 횟수
-    private static final int MAX_CONSECUTIVE_POLL_ERRORS = 3; // 폴링 중 네트워크 오류를 몇 번까지 넘길지
+    private static final int MAX_CONSECUTIVE_POLL_ERRORS = 3; // 폴링 중 일시 오류(네트워크·429·5xx)를 몇 번까지 넘길지
+    private static final int MAX_REQUEST_RETRIES = 2;       // 제출 계열 요청이 retryable 에러일 때 다시 보내는 횟수
 
     private final RestClient restClient;
     private final RestClient referenceDraftClient;
     private final Duration pollInterval;
     private final Duration pollTimeout;
+    private final Duration retryBackoff;
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private final AiComparisonResultParser parser = new AiComparisonResultParser(jsonMapper);
 
@@ -55,24 +58,28 @@ public class HttpAiClient implements AiClient {
             @Value("${ai.http.read-timeout}") Duration readTimeout,
             @Value("${ai.http.reference-draft-read-timeout}") Duration referenceDraftReadTimeout,
             @Value("${ai.http.poll-interval}") Duration pollInterval,
-            @Value("${ai.http.poll-timeout}") Duration pollTimeout) {
+            @Value("${ai.http.poll-timeout}") Duration pollTimeout,
+            @Value("${ai.http.retry-backoff}") Duration retryBackoff) {
         this(
                 builder(baseUrl, apiKey, connectTimeout, readTimeout).build(),
                 // 2-1은 동기로 수십 초 걸려서 타임아웃을 따로 길게 둔다
                 builder(baseUrl, apiKey, connectTimeout, referenceDraftReadTimeout).build(),
                 pollInterval,
-                pollTimeout);
+                pollTimeout,
+                retryBackoff);
         if (apiKey.isBlank()) {
             log.warn("ai.http.api-key가 비어 있습니다. AI 서버가 API 키를 요구하면 401로 실패합니다.");
         }
     }
 
     /** 테스트에서 MockRestServiceServer에 묶인 RestClient를 넣기 위한 생성자 */
-    HttpAiClient(RestClient restClient, RestClient referenceDraftClient, Duration pollInterval, Duration pollTimeout) {
+    HttpAiClient(RestClient restClient, RestClient referenceDraftClient,
+                 Duration pollInterval, Duration pollTimeout, Duration retryBackoff) {
         this.restClient = restClient;
         this.referenceDraftClient = referenceDraftClient;
         this.pollInterval = pollInterval;
         this.pollTimeout = pollTimeout;
+        this.retryBackoff = retryBackoff;
     }
 
     static RestClient.Builder builder(String baseUrl, String apiKey, Duration connectTimeout, Duration readTimeout) {
@@ -100,14 +107,16 @@ public class HttpAiClient implements AiClient {
 
     @Override
     public String generateReferenceDraft(AiReferenceDraftRequest request) {
-        TrainingCreateResponse response = referenceDraftClient.post()
-                .uri("/api/v1/trainings")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new TrainingCreateBody(
-                        request.trainingId(), request.topic(), request.writingType(),
-                        request.requirements(), request.timerMinutes()))
-                .retrieve()
-                .body(TrainingCreateResponse.class);
+        TrainingCreateBody body = new TrainingCreateBody(
+                request.trainingId(), request.topic(), request.writingType(),
+                request.requirements(), request.timerMinutes());
+        TrainingCreateResponse response = withRetry("AI 작성 글 생성 trainingId=" + request.trainingId(), () ->
+                referenceDraftClient.post()
+                        .uri("/api/v1/trainings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(body)
+                        .retrieve()
+                        .body(TrainingCreateResponse.class));
         if (response == null || response.aiWriting() == null || isBlank(response.aiWriting().content())) {
             throw new IllegalStateException("AI 서버가 빈 AI 작성 글을 반환했습니다.");
         }
@@ -125,10 +134,10 @@ public class HttpAiClient implements AiClient {
     @Override
     public AiComparisonResult retryComparison(AiComparisonRequest request) {
         try {
-            restClient.post()
+            withRetry("분석 재시도 analysisId=" + request.analysisId(), () -> restClient.post()
                     .uri("/api/v1/analyses/{analysisId}/retry", request.analysisId())
                     .retrieve()
-                    .toBodilessEntity();
+                    .toBodilessEntity());
         } catch (AiServerException e) {
             if (e.is(AiServerException.ANALYSIS_NOT_FOUND)) {
                 // 제출이 AI 서버에 닿지 않았거나, AI 서버 재시작·1시간 만료로 잊음 → 처음부터 다시 제출
@@ -172,58 +181,87 @@ public class HttpAiClient implements AiClient {
                     request.topic(), request.writingType(), request.requirements(),
                     request.analysisId(), request.versionId(), request.content(), aiWriting);
         }
-        restClient.post()
+        withRetry("분석 제출 analysisId=" + request.analysisId(), () -> restClient.post()
                 .uri(path, request.trainingId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
-                .toBodilessEntity();
+                .toBodilessEntity());
     }
 
-    /** 4-1을 poll-interval 간격으로 조회하다가 SUCCESS면 4-2 결과를 가져온다. poll-timeout을 넘으면 실패 */
+    /**
+     * AI 서버가 retryable=true로 거절하면(QUEUE_FULL·RATE_LIMITED 429, LLM_UNAVAILABLE 503 등)
+     * retry-backoff 배수로 쉬면서 최대 MAX_REQUEST_RETRIES번 다시 보낸다.
+     */
+    private <T> T withRetry(String description, Supplier<T> call) {
+        for (int attempt = 0; ; attempt++) {
+            try {
+                return call.get();
+            } catch (AiServerException e) {
+                if (!isTransient(e) || attempt >= MAX_REQUEST_RETRIES) {
+                    throw e;
+                }
+                log.warn("AI 서버 일시 오류로 다시 요청({}회): {} - {}", attempt + 1, description, e.getMessage());
+                sleep(retryBackoff.multipliedBy(attempt + 1));
+            }
+        }
+    }
+
+    /**
+     * 4-1을 poll-interval 간격으로 조회하다가 SUCCESS면 4-2 결과를 가져온다. poll-timeout을 넘으면 실패.
+     * 조회 중 일시 오류(네트워크, RATE_LIMITED 429 등 retryable)는 retry-backoff만큼 쉬고 계속 조회한다.
+     */
     private AiComparisonResult awaitResult(AiComparisonRequest request) {
         long deadline = System.nanoTime() + pollTimeout.toNanos();
         int resubmits = 0;
         int consecutiveErrors = 0;
         while (true) {
             AnalysisStatus status = null;
+            AiComparisonResult result = null;
             try {
                 status = restClient.get()
                         .uri("/api/v1/analyses/{analysisId}/status", request.analysisId())
                         .retrieve()
                         .body(AnalysisStatus.class);
+                if (status != null && "SUCCESS".equals(status.status())) {
+                    result = fetchResult(request.analysisId());
+                }
                 consecutiveErrors = 0;
             } catch (AiServerException e) {
-                if (!e.is(AiServerException.ANALYSIS_NOT_FOUND) || resubmits >= MAX_RESUBMITS) {
+                if (e.is(AiServerException.ANALYSIS_NOT_FOUND)) {
+                    if (resubmits >= MAX_RESUBMITS) {
+                        throw e;
+                    }
+                    resubmits++;
+                    log.info("AI 서버가 분석을 잊어서 다시 제출({}회): analysisId={}", resubmits, request.analysisId());
+                    submit(request);
+                } else if (e.is(AiServerException.ANALYSIS_NOT_READY)) {
+                    log.debug("AI 분석 결과가 아직 준비되지 않아 계속 조회: analysisId={}", request.analysisId());
+                } else if (!isTransient(e) || ++consecutiveErrors > MAX_CONSECUTIVE_POLL_ERRORS) {
                     throw e;
+                } else {
+                    log.warn("AI 분석 조회 일시 오류({}회), 계속 시도: analysisId={} - {}",
+                            consecutiveErrors, request.analysisId(), e.getMessage());
                 }
-                resubmits++;
-                log.info("AI 서버가 분석을 잊어서 다시 제출({}회): analysisId={}", resubmits, request.analysisId());
-                submit(request);
             } catch (ResourceAccessException e) {
                 // 네트워크 순간 오류(ngrok 등)는 몇 번까지 넘긴다. AI 서버 쪽 분석은 계속 진행 중
                 if (++consecutiveErrors > MAX_CONSECUTIVE_POLL_ERRORS) {
                     throw e;
                 }
-                log.warn("AI 분석 상태 조회 실패({}회), 계속 시도: analysisId={}", consecutiveErrors, request.analysisId());
+                log.warn("AI 분석 조회 실패({}회), 계속 시도: analysisId={}", consecutiveErrors, request.analysisId());
             }
 
-            if (status != null) {
-                switch (status.status()) {
-                    case "SUCCESS" -> {
-                        return fetchResult(request.analysisId());
-                    }
-                    case "FAILED" -> throw failedException(status);
-                    default -> { // PENDING, GENERATING: 계속 기다림
-                    }
-                }
+            if (result != null) {
+                return result;
             }
-
+            if (status != null && "FAILED".equals(status.status())) {
+                throw failedException(status);
+            }
             if (System.nanoTime() > deadline) {
                 throw new IllegalStateException("AI 분석 대기 시간(" + pollTimeout + ")을 넘었습니다: analysisId="
                         + request.analysisId());
             }
-            sleep(pollInterval);
+            sleep(consecutiveErrors > 0 ? retryBackoff : pollInterval);
         }
     }
 
@@ -289,7 +327,18 @@ public class HttpAiClient implements AiClient {
         } catch (RuntimeException ignored) {
             // JSON이 아니면 아래에서 본문 앞부분만 메시지로 남긴다
         }
-        return new AiServerException(status, null, abbreviate(body), status >= 500);
+        // JSON 에러 본문이 없으면(프록시·ngrok 오류 페이지 등) 429·5xx만 일시 오류로 본다
+        return new AiServerException(status, null, abbreviate(body), status == 429 || status >= 500);
+    }
+
+    /**
+     * 같은 요청을 잠시 후 그대로 다시 보내면 될 오류인지.
+     * ANALYSIS_NOT_FOUND·ANALYSIS_NOT_READY도 retryable=true지만 의미가 달라서(처음부터 재제출 / 상태 확인 후 조회) 제외한다.
+     */
+    private static boolean isTransient(AiServerException e) {
+        return e.isRetryable()
+                && !e.is(AiServerException.ANALYSIS_NOT_FOUND)
+                && !e.is(AiServerException.ANALYSIS_NOT_READY);
     }
 
     private static String abbreviate(String body) {

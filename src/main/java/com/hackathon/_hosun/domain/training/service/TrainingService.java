@@ -73,7 +73,7 @@ public class TrainingService {
                 .map(AttachmentResponse::from)
                 .toList();
 
-        // 과제 조건만으로 AI 작성 글 생성. 커밋 이후 비동기로 실행됨 (AiReferenceDraftGenerator)
+        // 과제 조건 + 첨부파일(저장소에서 다시 읽어 전달)로 AI 작성 글 생성. 커밋 이후 비동기로 실행됨 (AiReferenceDraftGenerator)
         AiReferenceDraft aiDraft = aiReferenceDraftRepository.save(AiReferenceDraft.createPending(training));
         eventPublisher.publishEvent(new AiReferenceDraftRequestedEvent(aiDraft.getId()));
 

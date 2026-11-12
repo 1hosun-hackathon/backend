@@ -2,6 +2,7 @@ package com.hackathon._hosun.domain.analysis.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -12,12 +13,15 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import com.hackathon._hosun.domain.analysis.ai.AiComparisonResultParser.AiResponseInvalidException;
 import com.hackathon._hosun.domain.analysis.entity.Criterion;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -37,20 +41,49 @@ class HttpAiClientTest {
     }
 
     @Test
-    void AI_작성_글_생성은_헤더를_붙여_요청하고_aiWriting_content를_반환한다() {
+    void AI_작성_글_생성은_헤더를_붙여_multipart로_요청하고_aiWriting_content를_반환한다() {
         server.expect(requestTo(BASE + "/api/v1/trainings"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("X-API-Key", "test-key"))
                 .andExpect(header("ngrok-skip-browser-warning", "true"))
-                .andExpect(jsonPath("$.trainingId").value(8))
-                .andExpect(jsonPath("$.writingType").value("논설문"))
-                .andExpect(jsonPath("$.timerMinutes").value(15))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(request -> {
+                    String body = ((MockClientHttpRequest) request).getBodyAsString(StandardCharsets.UTF_8);
+                    assertThat(body).contains("name=\"request\"", "Content-Type: application/json",
+                            "\"trainingId\":8", "\"writingType\":\"논설문\"", "\"timerMinutes\":15");
+                    assertThat(body).doesNotContain("name=\"files\"");
+                })
                 .andRespond(json("""
                         { "trainingId": 8, "aiWriting": { "content": "AI 글" }, "charCount": 4,
                           "promptVersion": "v4", "model": "m" }"""));
 
         String content = client.generateReferenceDraft(
-                new AiReferenceDraftRequest(8L, "탄소 중립", "논설문", null, 15));
+                new AiReferenceDraftRequest(8L, "탄소 중립", "논설문", null, 15, null));
+
+        assertThat(content).isEqualTo("AI 글");
+        server.verify();
+    }
+
+    @Test
+    void AI_작성_글_생성은_첨부파일을_files_파트로_보낸다() {
+        server.expect(requestTo(BASE + "/api/v1/trainings"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(request -> {
+                    String body = ((MockClientHttpRequest) request).getBodyAsString(StandardCharsets.UTF_8);
+                    assertThat(body).contains(
+                            "name=\"files\"; filename=\"IPCC_요약.txt\"", "Content-Type: text/plain", "탄소세 자료 본문",
+                            "filename=\"메모.hwpx\"", "Content-Type: application/octet-stream");
+                })
+                .andRespond(json("""
+                        { "aiWriting": { "content": "AI 글" },
+                          "attachments": [ { "fileName": "IPCC_요약.txt", "fileSize": 10, "used": true, "usedChars": 10 } ],
+                          "warnings": ["첨부파일 '메모.hwpx'을 읽지 못해 AI 작성 글에 반영하지 않았어요(손상 또는 암호)."] }"""));
+
+        String content = client.generateReferenceDraft(new AiReferenceDraftRequest(8L, "탄소 중립", "논설문", null, null,
+                List.of(
+                        new AiReferenceDraftRequest.Attachment(
+                                "IPCC_요약.txt", "text/plain", "탄소세 자료 본문".getBytes(StandardCharsets.UTF_8)),
+                        new AiReferenceDraftRequest.Attachment("메모.hwpx", null, new byte[] {1, 2, 3}))));
 
         assertThat(content).isEqualTo("AI 글");
         server.verify();
@@ -179,7 +212,7 @@ class HttpAiClientTest {
         server.expect(requestTo(BASE + "/api/v1/trainings"))
                 .andRespond(json("{ \"aiWriting\": { \"content\": \"AI 글\" } }"));
 
-        assertThat(client.generateReferenceDraft(new AiReferenceDraftRequest(8L, "주제", "논설문", null, null)))
+        assertThat(client.generateReferenceDraft(new AiReferenceDraftRequest(8L, "주제", "논설문", null, null, null)))
                 .isEqualTo("AI 글");
         server.verify();
     }

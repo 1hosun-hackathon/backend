@@ -7,18 +7,24 @@ import java.math.BigDecimal;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
@@ -107,20 +113,46 @@ public class HttpAiClient implements AiClient {
 
     @Override
     public String generateReferenceDraft(AiReferenceDraftRequest request) {
-        TrainingCreateBody body = new TrainingCreateBody(
-                request.trainingId(), request.topic(), request.writingType(),
-                request.requirements(), request.timerMinutes());
+        MultiValueMap<String, HttpEntity<?>> parts = trainingCreateParts(request);
         TrainingCreateResponse response = withRetry("AI 작성 글 생성 trainingId=" + request.trainingId(), () ->
                 referenceDraftClient.post()
                         .uri("/api/v1/trainings")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(body)
+                        .contentType(MediaType.MULTIPART_FORM_DATA)
+                        .body(parts)
                         .retrieve()
                         .body(TrainingCreateResponse.class));
         if (response == null || response.aiWriting() == null || isBlank(response.aiWriting().content())) {
             throw new IllegalStateException("AI 서버가 빈 AI 작성 글을 반환했습니다.");
         }
+        if (response.warnings() != null && !response.warnings().isEmpty()) {
+            // 못 읽은 첨부파일(이미지·옛 형식·스캔 PDF 등)은 AI 서버가 경고만 남기고 글은 생성한다
+            log.info("AI 작성 글 생성 경고: trainingId={}, warnings={}", request.trainingId(), response.warnings());
+        }
         return response.aiWriting().content();
+    }
+
+    /** 2-1 multipart: request 파트(JSON) + files 파트(첨부파일 원본, 0개 이상) */
+    private MultiValueMap<String, HttpEntity<?>> trainingCreateParts(AiReferenceDraftRequest request) {
+        TrainingCreateBody body = new TrainingCreateBody(
+                request.trainingId(), request.topic(), request.writingType(),
+                request.requirements(), request.timerMinutes());
+        MultiValueMap<String, HttpEntity<?>> parts = new LinkedMultiValueMap<>();
+        // 직접 UTF-8 JSON 바이트로 만들어 파트 변환기 설정에 영향받지 않게 한다
+        parts.add("request", part("request", null, MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(body)));
+        for (AiReferenceDraftRequest.Attachment file : request.attachments()) {
+            MediaType type = isBlank(file.contentType())
+                    ? MediaType.APPLICATION_OCTET_STREAM
+                    : MediaType.parseMediaType(file.contentType());
+            parts.add("files", part("files", file.fileName(), type, file.data()));
+        }
+        return parts;
+    }
+
+    private static HttpEntity<byte[]> part(String name, String filename, MediaType type, byte[] data) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentDisposition(ContentDisposition.formData().name(name).filename(filename).build());
+        headers.setContentType(type);
+        return new HttpEntity<>(data, headers);
     }
 
     // ===== 3-2 / 3-4 / 4-4 비교 분석 =====
@@ -371,7 +403,7 @@ public class HttpAiClient implements AiClient {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record TrainingCreateResponse(AiWriting aiWriting) {
+    record TrainingCreateResponse(AiWriting aiWriting, List<String> warnings) {
     }
 
     record DraftSubmitBody(String topic, String writingType, String requirements,

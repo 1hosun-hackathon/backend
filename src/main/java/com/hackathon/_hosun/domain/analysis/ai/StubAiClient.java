@@ -23,15 +23,31 @@ public class StubAiClient implements AiClient {
 
     @Override
     public AiComparisonResult analyzeComparison(AiComparisonRequest request) {
-        log.info("[StubAiClient] 비교 분석 더미 생성: trainingId={}", request.trainingId());
+        log.info("[StubAiClient] 비교 분석 더미 생성: analysisId={}", request.analysisId());
         List<AiComparisonResult.Item> items = Arrays.stream(Criterion.values())
                 .map(c -> new AiComparisonResult.Item(
                         c, "[임시] 내 글 요약", "[임시] AI 글 요약", "[임시] 비교", "[임시] 반영 포인트", 3))
                 .toList();
         return new AiComparisonResult(
                 "[임시] 전체 요약", "[임시] 강점", "[임시] 개선점",
-                new BigDecimal("70.00"), new BigDecimal("30.00"),
                 items,
-                List.of("[임시] 질문 1", "[임시] 질문 2", "[임시] 질문 3"));
+                List.of("[임시] 질문 1", "[임시] 질문 2", "[임시] 질문 3"),
+                null);
+    }
+
+    @Override
+    public AiComparisonResult retryComparison(AiComparisonRequest request) {
+        return analyzeComparison(request);
+    }
+
+    @Override
+    public AiComparisonResult resumeComparison(AiComparisonRequest request) {
+        return analyzeComparison(request);
+    }
+
+    @Override
+    public AiRatioResult calculateRatio(AiRatioRequest request) {
+        log.info("[StubAiClient] 자기 사고 비율 더미 계산: trainingId={}", request.trainingId());
+        return new AiRatioResult(new BigDecimal("70.0"), new BigDecimal("30.0"));
     }
 }

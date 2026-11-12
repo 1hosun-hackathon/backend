@@ -2,6 +2,7 @@ package com.hackathon._hosun.domain.writing.service;
 
 import com.hackathon._hosun.domain.analysis.entity.AiReferenceDraft;
 import com.hackathon._hosun.domain.analysis.entity.ComparisonAnalysis;
+import com.hackathon._hosun.domain.analysis.event.AnalysisRunMode;
 import com.hackathon._hosun.domain.analysis.event.ComparisonAnalysisRequestedEvent;
 import com.hackathon._hosun.domain.analysis.repository.AiReferenceDraftRepository;
 import com.hackathon._hosun.domain.analysis.repository.ComparisonAnalysisRepository;
@@ -97,7 +98,7 @@ public class WritingService {
         ComparisonAnalysis analysis = comparisonAnalysisRepository.save(
                 ComparisonAnalysis.createPending(version, aiDraft));
         // 커밋 이후 비동기로 실행됨 (ComparisonAnalysisGenerator)
-        eventPublisher.publishEvent(new ComparisonAnalysisRequestedEvent(analysis.getId()));
+        eventPublisher.publishEvent(new ComparisonAnalysisRequestedEvent(analysis.getId(), AnalysisRunMode.SUBMIT));
 
         return new SubmissionResponse(version.getId(), version.getSeqNo(), analysis.getId(), training.getStatus());
     }

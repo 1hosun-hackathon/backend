@@ -52,6 +52,10 @@ public class ComparisonAnalysis {
     @Column(name = "ai_dependency_ratio", precision = 5, scale = 2)
     private BigDecimal aiDependencyRatio;
 
+    /** AI 서버 4-2 응답 원본 JSON. 다음 회차 재검사의 previousResult로 그대로 보낸다 */
+    @Column(name = "raw_result", columnDefinition = "LONGTEXT")
+    private String rawResult;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     private ProcessingStatus status;
@@ -77,15 +81,18 @@ public class ComparisonAnalysis {
         this.status = ProcessingStatus.GENERATING;
     }
 
-    public void succeed(
-            String overallSummary, String strengths, String improvements,
-            BigDecimal selfThoughtRatio, BigDecimal aiDependencyRatio) {
+    public void succeed(String overallSummary, String strengths, String improvements, String rawResult) {
         this.overallSummary = overallSummary;
         this.strengths = strengths;
         this.improvements = improvements;
+        this.rawResult = rawResult;
+        this.status = ProcessingStatus.SUCCESS;
+    }
+
+    /** 3-5 훈련 완료 시 마지막 분석에 자기 사고 비율·AI 의존도를 기록한다 (/home·/dashboard가 읽음) */
+    public void recordRatios(BigDecimal selfThoughtRatio, BigDecimal aiDependencyRatio) {
         this.selfThoughtRatio = selfThoughtRatio;
         this.aiDependencyRatio = aiDependencyRatio;
-        this.status = ProcessingStatus.SUCCESS;
     }
 
     public void fail() {

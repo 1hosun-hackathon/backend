@@ -8,6 +8,7 @@ import com.hackathon._hosun.domain.analysis.entity.AnalysisItem;
 import com.hackathon._hosun.domain.analysis.entity.ComparisonAnalysis;
 import com.hackathon._hosun.domain.analysis.entity.ProcessingStatus;
 import com.hackathon._hosun.domain.analysis.entity.ThinkingQuestion;
+import com.hackathon._hosun.domain.analysis.event.AnalysisRunMode;
 import com.hackathon._hosun.domain.analysis.event.ComparisonAnalysisRequestedEvent;
 import com.hackathon._hosun.domain.analysis.repository.AnalysisItemRepository;
 import com.hackathon._hosun.domain.analysis.repository.ComparisonAnalysisRepository;
@@ -27,7 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 비교 분석 백그라운드 실행. PENDING → GENERATING → SUCCESS | FAILED, 성공 시 훈련은 ANALYZING → COMPARED.
  * AI 작성 글이 아직 생성 중이면 PENDING으로 두고, AI 작성 글 생성이 끝날 때 AiReferenceDraftGenerator가 다시 호출한다.
- * 분석 재시도(4-4)에서는 status를 PENDING으로 되돌린 뒤 generate()를 호출하면 된다.
+ * 분석 재시도(4-4)에서는 status를 PENDING으로 되돌린 뒤 RETRY로 generate()를 호출하면 된다.
  */
 @Slf4j
 @Component
@@ -44,17 +45,21 @@ public class ComparisonAnalysisGenerator {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onRequested(ComparisonAnalysisRequestedEvent event) {
-        generate(event.analysisId());
+        generate(event.analysisId(), event.mode());
     }
 
-    public void generate(Long analysisId) {
+    public void generate(Long analysisId, AnalysisRunMode mode) {
         AiComparisonRequest request = transactionTemplate.execute(status -> startGenerating(analysisId));
         if (request == null) {
             return;
         }
 
         try {
-            AiComparisonResult result = aiClient.analyzeComparison(request);
+            AiComparisonResult result = switch (mode) {
+                case SUBMIT -> aiClient.analyzeComparison(request);
+                case RETRY -> aiClient.retryComparison(request);
+                case RESUME -> aiClient.resumeComparison(request);
+            };
             transactionTemplate.executeWithoutResult(status -> saveResult(analysisId, result));
         } catch (Exception e) {
             log.error("비교 분석 실패: analysisId={}", analysisId, e);
@@ -85,25 +90,36 @@ public class ComparisonAnalysisGenerator {
 
         WritingVersion version = analysis.getVersion();
         Training training = version.getTraining();
-        String baseline = null;
+        WritingVersion baseline = null;
+        String previousResult = null;
         if (version.getSeqNo() >= 1) {
-            baseline = writingVersionRepository.findByTraining_IdOrderBySeqNoAsc(training.getId()).get(0).getContent();
+            List<WritingVersion> versions = writingVersionRepository.findByTraining_IdOrderBySeqNoAsc(training.getId());
+            baseline = versions.get(0);
+            previousResult = versions.stream()
+                    .filter(v -> v.getSeqNo() == version.getSeqNo() - 1)
+                    .findFirst()
+                    .flatMap(v -> comparisonAnalysisRepository.findByVersion_Id(v.getId()))
+                    .map(ComparisonAnalysis::getRawResult)
+                    .orElse(null);
         }
         return new AiComparisonRequest(
+                analysisId,
                 training.getId(),
                 training.getTopic(),
                 training.getWritingType().getLabel(),
                 training.getRequirements(),
+                version.getId(),
+                version.getSeqNo(),
                 version.getContent(),
                 aiDraft.getContent(),
-                baseline);
+                baseline == null ? null : baseline.getId(),
+                baseline == null ? null : baseline.getContent(),
+                previousResult);
     }
 
     private void saveResult(Long analysisId, AiComparisonResult result) {
         ComparisonAnalysis analysis = findAnalysis(analysisId);
-        analysis.succeed(
-                result.overallSummary(), result.strengths(), result.improvements(),
-                result.selfThoughtRatio(), result.aiDependencyRatio());
+        analysis.succeed(result.overallSummary(), result.strengths(), result.improvements(), result.rawResult());
 
         analysisItemRepository.saveAll(result.items().stream()
                 .map(i -> AnalysisItem.create(

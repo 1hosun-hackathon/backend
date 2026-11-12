@@ -10,6 +10,7 @@ import com.hackathon._hosun.domain.analysis.entity.ComparisonAnalysis;
 import com.hackathon._hosun.domain.analysis.entity.Criterion;
 import com.hackathon._hosun.domain.analysis.entity.ProcessingStatus;
 import com.hackathon._hosun.domain.analysis.event.AiReferenceDraftRequestedEvent;
+import com.hackathon._hosun.domain.analysis.event.AnalysisRunMode;
 import com.hackathon._hosun.domain.analysis.event.ComparisonAnalysisRequestedEvent;
 import com.hackathon._hosun.domain.analysis.repository.AiReferenceDraftRepository;
 import com.hackathon._hosun.domain.analysis.repository.AnalysisItemRepository;
@@ -120,7 +121,7 @@ public class AnalysisService {
             eventPublisher.publishEvent(new AiReferenceDraftRequestedEvent(aiDraft.getId()));
         } else {
             // AI 작성 글이 생성 중이면 분석은 PENDING으로 대기했다가 AI 작성 글 완료 시 이어서 실행됨
-            eventPublisher.publishEvent(new ComparisonAnalysisRequestedEvent(analysis.getId()));
+            eventPublisher.publishEvent(new ComparisonAnalysisRequestedEvent(analysis.getId(), AnalysisRunMode.RETRY));
         }
         return new AnalysisRetryResponse(analysis.getId(), analysis.getStatus());
     }

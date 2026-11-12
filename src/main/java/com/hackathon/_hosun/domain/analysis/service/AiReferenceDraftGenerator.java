@@ -5,11 +5,11 @@ import com.hackathon._hosun.domain.analysis.ai.AiReferenceDraftRequest;
 import com.hackathon._hosun.domain.analysis.entity.AiReferenceDraft;
 import com.hackathon._hosun.domain.analysis.entity.ProcessingStatus;
 import com.hackathon._hosun.domain.analysis.event.AiReferenceDraftRequestedEvent;
+import com.hackathon._hosun.domain.analysis.event.AnalysisRunMode;
 import com.hackathon._hosun.domain.analysis.entity.ComparisonAnalysis;
 import com.hackathon._hosun.domain.analysis.repository.AiReferenceDraftRepository;
 import com.hackathon._hosun.domain.analysis.repository.ComparisonAnalysisRepository;
 import com.hackathon._hosun.domain.training.entity.Training;
-import com.hackathon._hosun.domain.training.repository.TrainingAttachmentRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class AiReferenceDraftGenerator {
 
     private final AiReferenceDraftRepository aiReferenceDraftRepository;
-    private final TrainingAttachmentRepository trainingAttachmentRepository;
     private final ComparisonAnalysisRepository comparisonAnalysisRepository;
     private final ComparisonAnalysisGenerator comparisonAnalysisGenerator;
     private final AiClient aiClient;
@@ -64,7 +63,8 @@ public class AiReferenceDraftGenerator {
         // AI 작성 글 생성 중에 제출된 초안이 있으면 지금 분석 시작
         List<Long> waitingIds = transactionTemplate.execute(status ->
                 waitingAnalyses(aiDraftId).stream().map(ComparisonAnalysis::getId).toList());
-        waitingIds.forEach(comparisonAnalysisGenerator::generate);
+        // AI 서버에 아직 제출된 적 없는 분석들이라 새로 제출
+        waitingIds.forEach(id -> comparisonAnalysisGenerator.generate(id, AnalysisRunMode.SUBMIT));
     }
 
     private List<ComparisonAnalysis> waitingAnalyses(Long aiDraftId) {
@@ -81,15 +81,12 @@ public class AiReferenceDraftGenerator {
         draft.startGenerating();
 
         Training training = draft.getTraining();
-        var attachments = trainingAttachmentRepository.findByTraining_IdOrderByIdAsc(training.getId()).stream()
-                .map(a -> new AiReferenceDraftRequest.Attachment(a.getFileName(), a.getFileType(), a.getFileUrl()))
-                .toList();
         return new AiReferenceDraftRequest(
                 training.getId(),
                 training.getTopic(),
                 training.getWritingType().getLabel(),
                 training.getRequirements(),
-                attachments);
+                training.getTimerMinutes() == null ? null : training.getTimerMinutes().intValue());
     }
 
     private AiReferenceDraft findDraft(Long aiDraftId) {

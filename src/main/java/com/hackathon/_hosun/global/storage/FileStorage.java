@@ -15,6 +15,13 @@ public interface FileStorage {
      */
     String store(MultipartFile file, String directory);
 
+    /**
+     * store()가 돌려준 URL로 파일 원본을 읽는다. (AI 서버에 첨부파일을 넘길 때 사용)
+     *
+     * @throws java.io.UncheckedIOException 파일이 없거나 읽지 못했을 때
+     */
+    byte[] load(String fileUrl);
+
     /** store()가 돌려준 URL로 파일을 삭제한다. 없는 파일이면 무시 */
     void delete(String fileUrl);
 }

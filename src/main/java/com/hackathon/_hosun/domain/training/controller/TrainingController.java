@@ -38,7 +38,7 @@ public class TrainingController {
     @Operation(
             summary = "훈련 생성",
             description = "multipart/form-data. request 파트(JSON) + files 파트(0~5개, 각 10MB 이하, PDF·PPT·문서·이미지). "
-                    + "생성 직후 과제 조건만으로 AI 작성 글을 백그라운드에서 생성한다.",
+                    + "생성 직후 과제 조건과 첨부파일(글자를 뽑을 수 있는 PDF·DOCX·PPTX·HWPX·TXT)로 AI 작성 글을 백그라운드에서 생성한다.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(
                     mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
                     encoding = @Encoding(name = "request", contentType = MediaType.APPLICATION_JSON_VALUE))))

@@ -4,6 +4,7 @@ import com.hackathon._hosun.global.exception.BusinessException;
 import com.hackathon._hosun.global.exception.ErrorCode;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -46,6 +47,19 @@ public class LocalFileStorage implements FileStorage {
             throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
         }
         return urlPrefix + "/" + key;
+    }
+
+    @Override
+    public byte[] load(String fileUrl) {
+        if (fileUrl == null || !fileUrl.startsWith(urlPrefix + "/")) {
+            throw new IllegalArgumentException("이 저장소의 파일 URL이 아닙니다: " + fileUrl);
+        }
+        Path target = resolve(fileUrl.substring(urlPrefix.length() + 1));
+        try {
+            return Files.readAllBytes(target);
+        } catch (IOException e) {
+            throw new UncheckedIOException("파일 읽기 실패: " + target, e);
+        }
     }
 
     @Override

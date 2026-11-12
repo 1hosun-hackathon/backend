@@ -33,6 +33,8 @@ import org.springframework.util.StringUtils;
 public class WritingService {
 
     private static final int DRAFT_SEQ_NO = 0;
+    /** AI 서버 MAX_DRAFT_CHARS. 넘으면 AI가 거절해서 분석·완료가 계속 실패하므로 제출 시점에 막는다 */
+    static final int MAX_CONTENT_LENGTH = 3000;
 
     private final TrainingRepository trainingRepository;
     private final WritingVersionRepository writingVersionRepository;
@@ -53,7 +55,7 @@ public class WritingService {
 
     /** 3-2 초안 제출: DRAFTING → ANALYZING. 초안(seqNo 0) + 분석(PENDING) 생성 후 비동기 분석 */
     public SubmissionResponse submitDraft(Long userId, Long trainingId, String content) {
-        requireContent(content);
+        requireSubmittable(content);
         Training training = findForUpdate(userId, trainingId);
         training.submitDraft();
 
@@ -69,7 +71,7 @@ public class WritingService {
 
     /** 3-4 다시 검사하기: REWRITING → ANALYZING. 새 수정본 + 새 분석, AI 작성 글은 재사용 */
     public SubmissionResponse submitRevision(Long userId, Long trainingId, String content) {
-        requireContent(content);
+        requireSubmittable(content);
         Training training = findForUpdate(userId, trainingId);
         training.submitRevision(); // 상태 검사를 먼저 해서 잘못된 상태면 NO_CHANGES보다 409 TRAINING_INVALID_STATUS 우선
 
@@ -89,7 +91,7 @@ public class WritingService {
      * AI 호출이 실패하면 완료 전체를 롤백하고 502로 응답해서, 완료된 훈련에는 항상 비율이 있게 한다.
      */
     public TrainingCompleteResponse complete(Long userId, Long trainingId, String content) {
-        requireContent(content);
+        requireSubmittable(content);
         Training training = findForUpdate(userId, trainingId);
         training.complete();
 
@@ -144,6 +146,15 @@ public class WritingService {
     private WritingVersion findLatestVersion(Long trainingId) {
         return writingVersionRepository.findTopByTraining_IdOrderBySeqNoDesc(trainingId)
                 .orElseThrow(() -> new IllegalStateException("제출본이 없습니다: trainingId=" + trainingId));
+    }
+
+    /** AI로 보내는 글(3-2·3-4·3-5): 비어 있지 않고 3000자 이하 */
+    private void requireSubmittable(String content) {
+        requireContent(content);
+        // AI 서버(Python)는 코드 포인트 기준으로 세므로 맞춘다 (이모지 등 surrogate pair를 1자로)
+        if (content.codePointCount(0, content.length()) > MAX_CONTENT_LENGTH) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "글은 " + MAX_CONTENT_LENGTH + "자 이하여야 합니다.");
+        }
     }
 
     private void requireContent(String content) {

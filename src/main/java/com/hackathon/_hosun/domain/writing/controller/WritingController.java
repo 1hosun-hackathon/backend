@@ -52,7 +52,7 @@ public class WritingController {
                     + "분석 진행 상황은 4-1 분석 상태 API로 폴링한다.")
     @ApiResponses({
             @ApiResponse(responseCode = "202", description = "제출 성공, 분석 시작"),
-            @ApiResponse(responseCode = "400", description = "EMPTY_CONTENT"),
+            @ApiResponse(responseCode = "400", description = "EMPTY_CONTENT / VALIDATION_ERROR(3000자 초과)"),
             @ApiResponse(responseCode = "404", description = "TRAINING_NOT_FOUND"),
             @ApiResponse(responseCode = "409", description = "TRAINING_INVALID_STATUS")
     })
@@ -84,7 +84,7 @@ public class WritingController {
             description = "REWRITING → ANALYZING. 새 수정본과 새 분석을 만든다(AI 작성 글은 재사용). 직전 제출본과 같으면 거절.")
     @ApiResponses({
             @ApiResponse(responseCode = "202", description = "제출 성공, 분석 시작"),
-            @ApiResponse(responseCode = "400", description = "EMPTY_CONTENT"),
+            @ApiResponse(responseCode = "400", description = "EMPTY_CONTENT / VALIDATION_ERROR(3000자 초과)"),
             @ApiResponse(responseCode = "404", description = "TRAINING_NOT_FOUND"),
             @ApiResponse(responseCode = "409", description = "NO_CHANGES / TRAINING_INVALID_STATUS")
     })
@@ -101,9 +101,10 @@ public class WritingController {
             description = "REWRITING → COMPLETED. 입력창 내용을 최종 글로 확정한다. 마지막 제출본과 다르면 분석 없이 수정본 1건을 추가 저장.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "완료"),
-            @ApiResponse(responseCode = "400", description = "EMPTY_CONTENT"),
+            @ApiResponse(responseCode = "400", description = "EMPTY_CONTENT / VALIDATION_ERROR(3000자 초과)"),
             @ApiResponse(responseCode = "404", description = "TRAINING_NOT_FOUND"),
-            @ApiResponse(responseCode = "409", description = "TRAINING_INVALID_STATUS")
+            @ApiResponse(responseCode = "409", description = "TRAINING_INVALID_STATUS"),
+            @ApiResponse(responseCode = "502", description = "AI_SERVER_ERROR (자기 사고 비율 계산 실패, 완료되지 않음)")
     })
     @PostMapping("/complete")
     public TrainingCompleteResponse complete(
